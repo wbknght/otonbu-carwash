@@ -5,12 +5,6 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["fra1"],
-  "env": {
-    "PRISMA_GENERATE_DATAPROXY": {
-      "description": "Enable Prisma Data Proxy for serverless environments",
-      "value": "false"
-    }
-  },
   "build": {
     "env": {
       "DATABASE_URL": "$DATABASE_URL",
