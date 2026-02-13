@@ -1,0 +1,211 @@
+// Car Wash System - Prisma Configuration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DIRECT_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  worker
+  manager
+}
+
+enum JobStatus {
+  waiting
+  washing
+  detailing
+  ready_for_pickup
+  payment_pending
+  completed
+}
+
+enum PaymentMethod {
+  cash
+  card
+  other
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  cancelled
+  no_show
+}
+
+enum PickupLocation {
+  main_gate
+  north_campus
+  south_campus
+  library
+  gym
+}
+
+enum DropoffTimeWindow {
+  morning
+  afternoon
+  evening
+}
+
+enum ValetStatus {
+  requested
+  accepted
+  in_progress
+  completed
+}
+
+// ============================================
+// MODELS (Week 1 MVP)
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  // Relationships
+  createdJobs Job[]   @relation("JobCreatedBy")
+  changedJobs Job[]   @relation("JobStatusChangedBy")
+  createdAppointments Appointment[] @relation("AppointmentCreatedBy")
+  statusHistory JobStatusHistory[] @relation("StatusChangedBy")
+  
+  @@map("users")
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  licensePlate String @map("license_plate")
+  carBrand  String?  @map("car_brand")
+  carModel  String?  @map("car_model")
+  color     String?
+  notes     String?
+  
+  // Kanban status
+  status    JobStatus @default(waiting)
+  
+  // Payment tracking (CRITICAL)
+  paymentCompleted Boolean @default(false) @map("payment_completed")
+  paymentMethod PaymentMethod? @map("payment_method")
+  paymentAmount Float? @map("payment_amount")
+  paymentNote  String? @map("payment_note")
+  
+  // Status change tracking
+  statusChangedById String? @map("status_changed_by")
+  statusChangedAt DateTime? @default(now()) @map("status_changed_at")
+  
+  // Archive flag
+  archived Boolean @default(false)
+  
+  // Relationships
+  createdById String @map("created_by")
+  createdBy   User   @relation("JobCreatedBy", fields: [createdById], references: [id])
+  statusChangedBy User? @relation("JobStatusChangedBy", fields: [statusChangedById], references: [id])
+  
+  appointment Appointment? @relation("AppointmentToJob")
+  statusHistory JobStatusHistory[]
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  // Business rule: no duplicate active jobs with same plate
+  @@unique([licensePlate], name: "unique_active_plate")
+  @@map("jobs")
+  @@index([status], name: "idx_jobs_status")
+  @@index([licensePlate], name: "idx_jobs_license_plate")
+  @@index([paymentCompleted], name: "idx_jobs_payment_completed")
+  @@index([createdAt], name: "idx_jobs_created_at")
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  customerName String @map("customer_name")
+  phoneNumber String @map("phone_number")
+  email     String?
+  licensePlate String? @map("license_plate")
+  carBrand  String?  @map("car_brand")
+  carModel  String?  @map("car_model")
+  color     String?
+  serviceType String? @map("service_type")
+  
+  // Status
+  status    AppointmentStatus @default(pending)
+  
+  // Date/time
+  scheduledDate DateTime @map("scheduled_date")
+  scheduledTime DateTime @map("scheduled_time")
+  
+  notes     String?
+  
+  // Relationships
+  createdById String @map("created_by")
+  createdBy   User   @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  
+  jobId     String? @unique @map("job_id")
+  job       Job?    @relation("AppointmentToJob", fields: [jobId], references: [id])
+  
+  valetAppointment ValetAppointment?
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  @@map("appointments")
+  @@index([scheduledDate], name: "idx_appointments_date")
+  @@index([status], name: "idx_appointments_status")
+  @@index([phoneNumber], name: "idx_appointments_phone")
+}
+
+model ValetAppointment {
+  id        String   @id @default(cuid())
+  
+  // Link to appointment
+  appointmentId String @unique @map("appointment_id")
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  
+  // Campus-specific
+  pickupLocation PickupLocation @map("pickup_location")
+  dropoffTimeWindow DropoffTimeWindow @map("dropoff_time_window")
+  
+  // Valet status
+  valetStatus ValetStatus @default(requested) @map("valet_status")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  @@map("valet_appointments")
+  @@index([pickupLocation], name: "idx_valet_pickup_location")
+  @@index([valetStatus], name: "idx_valet_status")
+}
+
+model JobStatusHistory {
+  id        String   @id @default(cuid())
+  
+  // Job reference
+  jobId     String @map("job_id")
+  job       Job    @relation(fields: [jobId], references: [id])
+  
+  // Status change
+  oldStatus String? @map("old_status")
+  newStatus String  @map("new_status")
+  
+  // Who changed
+  changedById String @map("changed_by")
+  changedBy   User   @relation("StatusChangedBy", fields: [changedById], references: [id])
+  
+  changedAt DateTime @default(now()) @map("changed_at")
+  
+  @@map("job_status_history")
+  @@index([jobId], name: "idx_status_history_job")
+}

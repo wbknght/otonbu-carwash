@@ -1,0 +1,32 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": ["fra1"],
+  "env": {
+    "PRISMA_GENERATE_DATAPROXY": {
+      "description": "Enable Prisma Data Proxy for serverless environments",
+      "value": "false"
+    }
+  },
+  "build": {
+    "env": {
+      "DATABASE_URL": "$DATABASE_URL",
+      "DIRECT_URL": "$DIRECT_URL",
+      "PRISMA_GENERATE_DATAPROXY": "false"
+    }
+  },
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
+  ]
+}

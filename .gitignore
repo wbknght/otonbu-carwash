@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+*.tgz
+
+# Next.js
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# Environment variables
+.env*.local
+.env
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env*
+!.env.example
+
+# Vercel
+.vercel
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+**/prisma/migrations/*
+!**/prisma/migrations/0_init/
+**/prisma/*.db
+**/prisma/*.db-journal
+
+# Test files
+**/*.test.*
+**/*.spec.*
+
+# Temporary files
+tmp/
+temp/
+
+# Project-specific
+apps/web/.next/
+apps/web/test-*.js
+apps/web/test-*.md
