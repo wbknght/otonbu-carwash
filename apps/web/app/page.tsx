@@ -23,7 +23,7 @@ export default function Home() {
               </div>
             </div>
             <div className="text-sm text-gray-500">
-              <span className="font-medium">Live Jobs:</span> 4 active
+              <span className="font-medium">Live Jobs:</span> (see board below)
             </div>
           </div>
         </header>

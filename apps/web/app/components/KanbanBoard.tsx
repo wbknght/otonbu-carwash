@@ -152,6 +152,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [columns, setColumns] = useState<Column[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!initialJobs.length);
 
   // Initialize columns from jobs
   useEffect(() => {
@@ -223,7 +225,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Load jobs from API on mount
   useEffect(() => {
     const loadJobs = async () => {
-      if (initialJobs.length > 0) return; // Use initial jobs if provided
+      if (initialJobs.length > 0) {
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
       
       try {
         console.log('Fetching jobs from /api/jobs...');
@@ -242,21 +250,46 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           setJobs(result.data);
           console.log('Jobs loaded successfully:', result.data.length);
         } else {
-          console.error('API returned error:', result.error);
+          throw new Error(result.error || 'API returned unsuccessful response');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading jobs:', error);
-        // You could set an error state here to display to user
+        setError(error.message || 'Failed to load jobs');
+      } finally {
+        setLoading(false);
       }
     };
 
     loadJobs();
   }, [initialJobs]);
 
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg text-gray-600">Loading Kanban board...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Kanban Board</h2>
+          <p className="text-red-700 mb-3">{error}</p>
+          <div className="text-sm text-red-600 space-y-2">
+            <p>• Check browser console for details (F12)</p>
+            <p>• Verify API endpoint: <code className="bg-red-100 px-1 rounded">/api/jobs</code></p>
+            <p>• Test API directly: <a href="/api/jobs" className="underline" target="_blank">/api/jobs</a></p>
+            <p>• Check health endpoint: <a href="/api/health" className="underline" target="_blank">/api/health</a></p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+          >
+            ↻ Retry
+          </button>
+        </div>
       </div>
     );
   }
