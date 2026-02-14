@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Job, JobStatus, Column, KanbanBoardProps } from './types';
 
 // Status configurations
@@ -23,12 +25,30 @@ const STATUS_DESCRIPTIONS: Record<JobStatus, string> = {
   completed: 'Job completed',
 };
 
-// Job card component
+// Drag and drop item types
+const ItemTypes = {
+  JOB: 'job',
+};
+
+// Job card component (draggable)
 const JobCard: React.FC<{ job: Job; onStatusChange?: (newStatus: JobStatus) => void }> = ({ job, onStatusChange }) => {
   const config = STATUS_CONFIG[job.status];
   
+  // Make job card draggable
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: ItemTypes.JOB,
+    item: { id: job.id, status: job.status },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }), [job.id, job.status]);
+  
   return (
-    <div className={`p-3 rounded-lg border ${config.bgColor} border-gray-300 hover:border-gray-400 transition-colors shadow-sm hover:shadow`}>
+    <div 
+      ref={drag}
+      className={`p-3 rounded-lg border ${config.bgColor} border-gray-300 hover:border-gray-400 transition-colors shadow-sm hover:shadow cursor-move ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      title="Drag to move between columns"
+    >
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -36,6 +56,7 @@ const JobCard: React.FC<{ job: Job; onStatusChange?: (newStatus: JobStatus) => v
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.color} ${config.bgColor}`}>
               {config.title.charAt(0)}
             </span>
+            <span className="text-xs text-gray-500 ml-1">↷</span>
           </div>
           
           <div className="text-xs text-gray-600 space-y-0.5">
@@ -97,12 +118,26 @@ const JobCard: React.FC<{ job: Job; onStatusChange?: (newStatus: JobStatus) => v
   );
 };
 
-// Column component
+// Column component (droppable)
 const ColumnComponent: React.FC<{ 
   column: Column; 
   onJobStatusChange?: (jobId: string, newStatus: JobStatus) => void;
 }> = ({ column, onJobStatusChange }) => {
   const config = STATUS_CONFIG[column.id];
+  
+  // Make column droppable for jobs
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: ItemTypes.JOB,
+    drop: (item: { id: string, status: JobStatus }) => {
+      // Only update if job is being moved to a different column
+      if (item.status !== column.id && onJobStatusChange) {
+        onJobStatusChange(item.id, column.id);
+      }
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+    }),
+  }), [column.id, onJobStatusChange]);
   
   return (
     <div className="flex flex-col h-[600px] border border-gray-200 rounded-lg shadow-sm overflow-hidden">
@@ -119,8 +154,11 @@ const ColumnComponent: React.FC<{
         </div>
       </div>
       
-      {/* Column Body - Scrollable job list */}
-      <div className="flex-1 p-3 bg-gray-50 overflow-y-auto">
+      {/* Column Body - Scrollable job list (drop zone) */}
+      <div 
+        ref={drop}
+        className={`flex-1 p-3 overflow-y-auto ${isOver ? 'bg-blue-50' : 'bg-gray-50'} transition-colors`}
+      >
         {column.jobs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400 py-8">
             <div className="text-4xl mb-2">📭</div>
@@ -309,52 +347,54 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   console.log('KanbanBoard: Rendering board', { jobsLength: jobs.length, columnsLength: columns.length });
 
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">Kanban Board</h2>
-            <p className="text-sm text-gray-500">Click status buttons to update job progress</p>
-          </div>
-          <div className="text-sm text-gray-600">
-            {isUpdating && <span className="text-blue-600">Updating...</span>}
-            <span className="ml-3">Active jobs: <span className="font-bold">{jobs.length}</span></span>
+    <DndProvider backend={HTML5Backend}>
+      <div className="p-4">
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800">Kanban Board</h2>
+              <p className="text-sm text-gray-500">Drag jobs between columns or click status buttons</p>
+            </div>
+            <div className="text-sm text-gray-600">
+              {isUpdating && <span className="text-blue-600">Updating...</span>}
+              <span className="ml-3">Active jobs: <span className="font-bold">{jobs.length}</span></span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Kanban Board - Fixed Horizontal Layout */}
-      <div className="relative">
-        <div className="overflow-x-auto overflow-y-hidden pb-4 -mx-4 px-4">
-          <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
-            {columns.map((column) => (
-              <div key={column.id} className="w-80 flex-shrink-0">
-                <ColumnComponent
-                  column={column}
-                  onJobStatusChange={handleJobStatusChange}
-                />
-              </div>
-            ))}
+        {/* Kanban Board - Fixed Horizontal Layout */}
+        <div className="relative">
+          <div className="overflow-x-auto overflow-y-hidden pb-4 -mx-4 px-4">
+            <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
+              {columns.map((column) => (
+                <div key={column.id} className="w-80 flex-shrink-0">
+                  <ColumnComponent
+                    column={column}
+                    onJobStatusChange={handleJobStatusChange}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Scroll hint */}
+          <div className="text-center text-xs text-gray-500 mt-2">
+            ← Scroll horizontally to see all columns →
           </div>
         </div>
-        
-        {/* Scroll hint */}
-        <div className="text-center text-xs text-gray-500 mt-2">
-          ← Scroll horizontally to see all columns →
+
+        {/* Instructions */}
+        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+          <h3 className="font-semibold text-blue-900 mb-2">How to use:</h3>
+          <ul className="text-sm text-blue-800 list-disc pl-5 space-y-1">
+            <li>Drag jobs between columns to change status</li>
+            <li>Or click status buttons on job cards (W=Washing, RfP=Ready for Pickup, PP=Payment Pending, C=Completed)</li>
+            <li>Jobs automatically update via API when status changes</li>
+            <li>Refresh the page to see the latest job status</li>
+          </ul>
         </div>
       </div>
-
-      {/* Instructions */}
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-        <h3 className="font-semibold text-blue-900 mb-2">How to use:</h3>
-        <ul className="text-sm text-blue-800 list-disc pl-5 space-y-1">
-          <li>Click the status buttons on job cards to change status</li>
-          <li>Jobs automatically update via API when status changes</li>
-          <li>Refresh the page to see the latest job status</li>
-          <li>Drag & drop support coming soon!</li>
-        </ul>
-      </div>
-    </div>
+    </DndProvider>
   );
 };
 
