@@ -226,15 +226,27 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (initialJobs.length > 0) return; // Use initial jobs if provided
       
       try {
+        console.log('Fetching jobs from /api/jobs...');
         const response = await fetch('/api/jobs');
-        if (!response.ok) throw new Error('Failed to fetch jobs');
+        console.log('Fetch response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch jobs: ${response.status} ${errorText}`);
+        }
         
         const result = await response.json();
+        console.log('Fetch result:', result.success ? `${result.data?.length || 0} jobs` : 'failed');
+        
         if (result.success) {
           setJobs(result.data);
+          console.log('Jobs loaded successfully:', result.data.length);
+        } else {
+          console.error('API returned error:', result.error);
         }
       } catch (error) {
         console.error('Error loading jobs:', error);
+        // You could set an error state here to display to user
       }
     };
 

@@ -7,6 +7,11 @@ export type JobStatus =
   | 'payment_pending'
   | 'completed';
 
+export interface CreatedBy {
+  name: string;
+  email: string;
+}
+
 export interface Job {
   id: string;
   licensePlate: string;
@@ -17,12 +22,15 @@ export interface Job {
   paymentCompleted: boolean;
   paymentMethod?: 'cash' | 'card' | 'other' | null;
   paymentAmount?: number | null;
+  paymentNote?: string | null;
+  notes?: string | null;
+  archived: boolean;
+  createdById: string;
   createdAt: string;
   updatedAt: string;
+  statusChangedById?: string | null;
   statusChangedAt?: string | null;
-  userId?: string | null;
-  valetId?: string | null;
-  notes?: string | null;
+  createdBy?: CreatedBy | null;
 }
 
 export interface Column {
