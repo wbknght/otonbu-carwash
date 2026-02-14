@@ -44,4 +44,4 @@ export function mapSupabaseJob(row: any) {
       email: row.users.email
     } : null
   }
-}
+}# Redeploy with Supabase environment variables
