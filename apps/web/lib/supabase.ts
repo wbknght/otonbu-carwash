@@ -4,19 +4,24 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Use service role key for server-side operations (requires appropriate permissions)
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Supabase environment variables are not set. Using direct connection.')
+// Debug logging (remove in production)
+if (typeof window === 'undefined') {
+  // Server-side logging
+  console.log('[Supabase Config] Server-side initialization')
+  console.log('[Supabase Config] URL present:', !!supabaseUrl)
+  console.log('[Supabase Config] Anon key present:', !!supabaseAnonKey)
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[Supabase Config] Missing environment variables!')
+  }
 }
 
-// Create Supabase client with service role key for server-side operations
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+// Create Supabase client with anon key for public API access
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
-  },
+  }
 })
 
 // Helper function to convert Supabase response to our Job type
@@ -44,4 +49,4 @@ export function mapSupabaseJob(row: any) {
       email: row.users.email
     } : null
   }
-}# Redeploy with Supabase environment variables
+}
