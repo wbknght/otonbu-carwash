@@ -70,6 +70,12 @@ export default function Home() {
             <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
               View Reports
             </button>
+            <a 
+              href="/test"
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition inline-block"
+            >
+              🐛 Debug API
+            </a>
           </div>
         </div>
         
