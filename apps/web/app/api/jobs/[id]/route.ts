@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '../../../../lib/db'
-import { JobStatus } from '@prisma/client'
+import { supabase, mapSupabaseJob } from '../../../../lib/supabase'
 
-// PATCH /api/jobs/[id] - Update job status
+// Job status values from schema.prisma
+const JOB_STATUS_VALUES = [
+  'waiting',
+  'washing', 
+  'detailing',
+  'ready_for_pickup',
+  'payment_pending',
+  'completed'
+] as const
+
+type JobStatus = typeof JOB_STATUS_VALUES[number]
+
+// PATCH /api/jobs/[id] - Update job status (Supabase version)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -39,24 +50,25 @@ export async function PATCH(
       )
     }
     
-    // Validate status against JobStatus enum
-    const validStatuses = Object.values(JobStatus)
-    if (!validStatuses.includes(status as JobStatus)) {
+    // Validate status against valid statuses
+    if (!JOB_STATUS_VALUES.includes(status)) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Invalid status value. Must be one of: ${validStatuses.join(', ')}` 
+          error: `Invalid status value. Must be one of: ${JOB_STATUS_VALUES.join(', ')}` 
         },
         { status: 400 }
       )
     }
     
     // Check if job exists
-    const existingJob = await prisma.job.findUnique({
-      where: { id }
-    })
+    const { data: existingJob, error: fetchError } = await supabase
+      .from('jobs')
+      .select('id')
+      .eq('id', id)
+      .single()
     
-    if (!existingJob) {
+    if (fetchError || !existingJob) {
       return NextResponse.json(
         { success: false, error: `Job with ID ${id} not found` },
         { status: 404 }
@@ -64,14 +76,32 @@ export async function PATCH(
     }
     
     // Update job status
-    const updatedJob = await prisma.job.update({
-      where: { id },
-      data: { 
-        status: status as JobStatus,
-        statusChangedAt: new Date(),
-        // In a real app, we'd set statusChangedById from auth
-      }
-    })
+    const updateData = {
+      status,
+      status_changed_at: new Date().toISOString(),
+      // In a real app, we'd set status_changed_by from auth
+      updated_at: new Date().toISOString()
+    }
+    
+    const { data, error } = await supabase
+      .from('jobs')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        users:created_by(name, email)
+      `)
+      .single()
+    
+    if (error) {
+      console.error('Supabase PATCH /api/jobs/[id] error:', error)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
+    
+    const updatedJob = mapSupabaseJob(data)
     
     return NextResponse.json({
       success: true,
@@ -81,14 +111,6 @@ export async function PATCH(
     
   } catch (error: any) {
     console.error(`PATCH /api/jobs/${params?.id} error:`, error)
-    
-    // Handle Prisma errors
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { success: false, error: 'Job not found' },
-        { status: 404 }
-      )
-    }
     
     return NextResponse.json(
       { success: false, error: error.message || 'Internal server error' },
