@@ -222,14 +222,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  // Load jobs from API on mount
+  // Load jobs from API on mount (run once)
   useEffect(() => {
+    // Only fetch if we don't have initial jobs already
+    if (initialJobs.length > 0) {
+      setLoading(false);
+      return;
+    }
+    
     const loadJobs = async () => {
-      if (initialJobs.length > 0) {
-        setLoading(false);
-        return;
-      }
-      
       setLoading(true);
       setError(null);
       
@@ -261,7 +262,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     };
 
     loadJobs();
-  }, [initialJobs]);
+    // Empty dependency array ensures this runs only once on mount
+    // initialJobs is captured from first render
+  }, []);
 
   if (isLoading || loading) {
     return (
