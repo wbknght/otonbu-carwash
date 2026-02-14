@@ -149,14 +149,20 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onJobStatusChange,
   isLoading = false 
 }) => {
+  console.log('KanbanBoard: Component rendering', { initialJobsLength: initialJobs.length, isLoading });
+  
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [columns, setColumns] = useState<Column[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialJobs.length);
+  
+  console.log('KanbanBoard: State', { jobsLength: jobs.length, columnsLength: columns.length, loading, error });
 
   // Initialize columns from jobs
   useEffect(() => {
+    console.log('KanbanBoard: Initializing columns from jobs', { jobsLength: jobs.length });
+    
     const columnMap: Record<JobStatus, Job[]> = {
       waiting: [],
       washing: [],
@@ -176,6 +182,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       jobs,
     }));
 
+    console.log('KanbanBoard: Setting columns', { columnCount: newColumns.length });
     setColumns(newColumns);
   }, [jobs]);
 
@@ -267,6 +274,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, []);
 
   if (isLoading || loading) {
+    console.log('KanbanBoard: Showing loading state', { isLoading, loading, jobsLength: jobs.length });
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg text-gray-600">Loading Kanban board...</div>
@@ -275,6 +283,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   if (error) {
+    console.log('KanbanBoard: Showing error state', { error });
     return (
       <div className="p-4">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -296,6 +305,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </div>
     );
   }
+  
+  console.log('KanbanBoard: Rendering board', { jobsLength: jobs.length, columnsLength: columns.length });
 
   return (
     <div className="p-4">
